@@ -1,72 +1,67 @@
-import math
+export function calculatePacing(ftp, wPrime, bodyWeight, segments) {
+  let wBal = wPrime;
+  let totalTime = 0;
+  const bikeWeight = 8; // default
+  const totalMass = bodyWeight + bikeWeight;
+  const segmentMeters = 0.125 * 1609.34;
+  
+  const g = 9.81, crr = 0.005, rho = 1.225, cda = 0.38, efficiency = 0.96;
+  const windMs = 4 * 0.44704; // 4mph headwind default
+  
+  // 1. Optimization Loop (Binary Search for Intensity Factor)
+  let low = 0.7, high = 1.5, intensityFactor = 1.0;
+  
+  for (let j = 0; j < 15; j++) {
+    intensityFactor = (low + high) / 2;
+    let tempWBal = wPrime;
+    
+    for (const grade of segments) {
+      const targetP = ftp * (1.0 + (grade - 0.075) * 2) * intensityFactor;
+      const pWheels = targetP * efficiency;
+      let v = 3.5;
+      for (let k = 0; k < 7; k++) {
+        const fGravity = totalMass * g * grade;
+        const fRolling = totalMass * g * crr;
+        const fDrag = 0.5 * rho * Math.pow((v + windMs), 2) * cda;
+        v = pWheels / (fGravity + fRolling + fDrag);
+      }
+      const timeSec = segmentMeters / v;
+      if (targetP > ftp) {
+        tempWBal -= (targetP - ftp) * timeSec;
+      } else {
+        tempWBal += (wPrime - tempWBal) * (1 - Math.exp(-timeSec / 300));
+      }
+    }
+    if (tempWBal > 0) low = intensityFactor;
+    else high = intensityFactor;
+  }
 
-def simulate_climb_final(ftp, w_prime, segments, body_weight, bike_weight, intensity_factor, headwind_mph):
-    w_bal = w_prime
-    total_time = 0
-    total_mass = body_weight + bike_weight
-    segment_miles = 0.125
-    segment_meters = segment_miles * 1609.34
-    
-    # Physics & Reality Constants
-    g, crr, rho = 9.81, 0.005, 1.225
-    cda = 0.38        # Typical hoods climbing position
-    efficiency = 0.96 # 4% drivetrain/bearing loss
-    wind_ms = headwind_mph * 0.44704
-    
-    results = []
+  // 2. Final Run with optimized intensity
+  const results = [];
+  wBal = wPrime;
+  totalTime = 0;
 
-    for grade in segments:
-        # Pacing Strategy: Higher intensity on steeper sections
-        target_p = ftp * (1.0 + (grade - 0.075) * 2) * intensity_factor
-        p_wheels = target_p * efficiency
-        
-        # Iterative solver for ground speed (v)
-        v = 3.5 
-        for _ in range(7):
-            f_gravity = total_mass * g * grade
-            f_rolling = total_mass * g * crr
-            f_drag = 0.5 * rho * ((v + wind_ms)**2) * cda
-            v = p_wheels / (f_gravity + f_rolling + f_drag)
-        
-        time_seconds = segment_meters / v
-        total_time += time_seconds
-        
-        # W' Balance
-        if target_p > ftp:
-            w_bal -= (target_p - ftp) * time_seconds
-        else:
-            w_bal += (w_prime - w_bal) * (1 - math.exp(-time_seconds / 300))
-            
-        results.append((grade, target_p, w_bal, v))
-        
-    return total_time, w_bal, results
+  segments.forEach((grade) => {
+    const targetP = ftp * (1.0 + (grade - 0.075) * 2) * low;
+    const pWheels = targetP * efficiency;
+    let v = 3.5;
+    for (let k = 0; k < 7; k++) {
+      const fGravity = totalMass * g * grade;
+      const fRolling = totalMass * g * crr;
+      const fDrag = 0.5 * rho * Math.pow((v + windMs), 2) * cda;
+      v = pWheels / (fGravity + fRolling + fDrag);
+    }
+    const timeSec = segmentMeters / v;
+    totalTime += timeSec;
+    
+    if (targetP > ftp) {
+      wBal -= (targetP - ftp) * timeSec;
+    } else {
+      wBal += (wPrime - wBal) * (1 - Math.exp(-timeSec / 300));
+    }
 
-def get_pacing_plan(ftp, w_prime, body_weight, bike_weight, headwind):
-    olh_grades = [
-        0.04, 0.08, 0.08, 0.06, 0.07, 0.08, 0.07, 0.08, # 0.0 - 1.0 mi
-        0.09, 0.07, 0.08, 0.07, 0.07, 0.08, 0.09, 0.10, # 1.0 - 2.0 mi
-        0.06, 0.08, 0.07, 0.09, 0.08, 0.06, 0.05, 0.04  # 2.0 - 3.0 mi
-    ]
-    
-    # Optimization loop
-    low, high = 0.7, 1.5
-    for _ in range(15):
-        mid = (low + high) / 2
-        _, final_w, _ = simulate_climb_final(ftp, w_prime, olh_grades, body_weight, bike_weight, mid, headwind)
-        if final_w > 0: low = mid
-        else: high = mid
-            
-    final_time, _, data = simulate_climb_final(ftp, w_prime, olh_grades, body_weight, bike_weight, low, headwind)
-    
-    print(f"--- THE FINAL VIBE: OLH PACING PLAN ---")
-    print(f"Total Time: {int(final_time//60)}m {int(final_time%60)}s")
-    print(f"Average Power: {sum(d[1] for d in data)/len(data):.1f}W\n")
-    print("| Seg | Dist (mi) | Grade | Target Pwr | Speed (mph) | W' Bal (J) |")
-    print("|-----|-----------|-------|------------|-------------|------------|")
-    
-    for i, (g, p, w, v) in enumerate(data):
-        dist = (i + 1) * 0.125
-        print(f"| {i+1:2}  | {dist:8.3f}  | {g:>5.1%} | {p:9.1f}W | {v*2.237:11.1f} | {max(0, int(w)):10} |")
+    results.append({ grade, targetP, wBal, v });
+  });
 
-# Set your stats here
-get_pacing_plan(ftp=280, w_prime=13000, body_weight=68, bike_weight=8, headwind=4)
+  return { totalTime, results };
+}
