@@ -63,5 +63,10 @@ export function calculatePacing(ftp, wPrime, bodyWeight, segments) {
     results.push({ grade, targetP, wBal, v });
   });
 
-  return { totalTime, results };
+  return { 
+    grade, 
+    targetP, 
+    wBal: Math.max(0, Math.round(currentWBal)), // Keep it pretty and positive
+    speed: v * 2.237 
+  };
 }
