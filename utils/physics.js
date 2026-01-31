@@ -3,7 +3,7 @@ export function calculatePacing(ftp, wPrime, weight, segments) {
   const totalMass = weight + bikeWeight;
   const segmentMeters = 0.125 * 1609.34;
   const g = 9.81, crr = 0.005, rho = 1.225, cda = 0.38, efficiency = 0.96;
-  const windMs = 1.78; // ~4mph headwind constant
+  const windMs = 1.78;
 
   // 1. Optimization Loop
   let low = 0.7, high = 1.4;
@@ -13,8 +13,7 @@ export function calculatePacing(ftp, wPrime, weight, segments) {
     let blownUp = false;
 
     for (const segGrade of segments) {
-      // Dynamic Scaling: Ride harder on climbs, easier on flats
-      // This pivot (0.072) helps create the Green/Red split
+      // Pivot around 7.2% to ensure we see both Green and Red zones
       let targetP = ftp * (1.0 + (segGrade - 0.072) * 2.0) * mid;
       let v = 3.5;
       for (let j = 0; j < 7; j++) {
