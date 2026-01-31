@@ -11,6 +11,6 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "recharts": "latest"
+    "recharts": "^2.12.0"
   }
 }
