@@ -1,6 +1,6 @@
 {
-  "name": "bike-pacer",
-  "version": "0.1.0",
+  "name": "olh-pacer",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,12 +11,6 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "recharts": "latest",
-    "lucide-react": "latest"
-  },
-  "devDependencies": {
-    "autoprefixer": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest"
+    "recharts": "latest"
   }
 }
