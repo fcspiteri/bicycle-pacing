@@ -14,7 +14,7 @@ export function calculatePacing(ftp, wPrime, weight, segments) {
   
     for (const segmentGrade of segments) {
       // Smoother pacing: Reduce the multiplier from 2 to 1.5
-      let targetP = ftp * (1.0 + (segmentGrade - 0.075) * 1.5) * mid;
+      let targetP = ftp * (1.0 + (segmentGrade - 0.072) * 2.5) * mid;
       
       // Physics for speed (same as before)
       let v = 3.5;
