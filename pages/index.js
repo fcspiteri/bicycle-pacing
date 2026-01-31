@@ -49,21 +49,46 @@ export default function PacerApp() {
         </div>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorW" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="segment" label={{ value: '1/8mi Segments', position: 'insideBottom', offset: -5 }} />
-              <YAxis yAxisId="left" orientation="left" stroke="#6366f1" label={{ value: 'W\' (J)', angle: -90, position: 'insideLeft' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#f43f5e" label={{ value: 'Power (W)', angle: 90, position: 'insideRight' }} />
-              <Tooltip />
-              <Area yAxisId="left" type="monotone" dataKey="wBal" stroke="#6366f1" fillOpacity={1} fill="url(#colorW)" name="W' Balance" />
-              <Line yAxisId="right" type="stepAfter" dataKey="power" stroke="#f43f5e" dot={false} strokeWidth={2} name="Target Power" />
-            </AreaChart>
+            {/* W' Balance Chart */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
+              <h2 className="text-lg font-bold text-slate-800 mb-4">W' Battery (Anaerobic Reserve)</h2>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorWBal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="segment" 
+                      label={{ value: 'Distance (1/8mi segments)', position: 'insideBottom', offset: -5 }} 
+                    />
+                    <YAxis 
+                      domain={[0, stats.wPrime]} 
+                      label={{ value: 'Joules (J)', angle: -90, position: 'insideLeft' }} 
+                    />
+                    <Tooltip 
+                      formatter={(value) => [`${value} J`, "W' Remaining"]}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="wBal" 
+                      stroke="#ef4444" 
+                      fillOpacity={1} 
+                      fill="url(#colorWBal)" 
+                      strokeWidth={3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-slate-400 mt-4 italic">
+                Note: Red zones indicate where you are digging into your "matches." If this hits 0, you'll blow up!
+              </p>
+            </div>
           </ResponsiveContainer>
         </div>
       </div>
