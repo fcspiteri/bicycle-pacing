@@ -60,7 +60,7 @@ export function calculatePacing(ftp, wPrime, bodyWeight, segments) {
       wBal += (wPrime - wBal) * (1 - Math.exp(-timeSec / 300));
     }
 
-    results.append({ grade, targetP, wBal, v });
+    results.push({ grade, targetP, wBal, v });
   });
 
   return { totalTime, results };
