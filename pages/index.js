@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { calculatePacing } from '../utils/physics';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  AreaChart, Area, ComposedChart, ReferenceLine, Line 
+  AreaChart, Area, ComposedChart, ReferenceLine 
 } from 'recharts';
 
 export default function PacerApp() {
@@ -23,6 +23,7 @@ export default function PacerApp() {
   );
 
   const chartData = useMemo(() => {
+    if (!results || results.length === 0) return [];
     return results.map((r, i) => ({
       dist: `${(i * 0.125).toFixed(2)}`,
       power: Math.round(r.targetP),
@@ -31,21 +32,14 @@ export default function PacerApp() {
     }));
   }, [results]);
 
-  if (!mounted) return <div className="p-10 text-center">Loading OLH Pacer...</div>;
+  if (!mounted) return <div className="p-10 text-center font-sans">Initialising Physics Engine...</div>;
 
-  // --- SAFETY MATH START ---
+  // Calculate Gradient Offset with safety bounds
   const powerValues = chartData.map(d => d.power);
-  const rawMin = Math.min(...powerValues, stats.ftp);
-  const rawMax = Math.max(...powerValues, stats.ftp);
-  
-  // Ensure we never divide by zero
-  const chartMin = rawMin - 20;
-  const chartMax = rawMax + 20;
+  const chartMin = Math.min(...powerValues, stats.ftp) - 20;
+  const chartMax = Math.max(...powerValues, stats.ftp) + 20;
   const range = chartMax - chartMin;
-  
-  // Calculate offset, clamping between 0 and 1
   const ftpOffset = range !== 0 ? Math.min(Math.max(1 - (stats.ftp - chartMin) / range, 0), 1) : 0.5;
-  // --- SAFETY MATH END ---
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto font-sans bg-slate-50 min-h-screen text-slate-900">
@@ -54,19 +48,17 @@ export default function PacerApp() {
         <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">Old La Honda Road Optimization</p>
       </header>
 
-      {/* Input Controls */}
+      {/* Inputs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'FTP (Watts)', key: 'ftp' },
-          { label: "W' (Joules)", key: 'wPrime' },
-          { label: 'System Weight (kg)', key: 'weight' }
-        ].map((input) => (
-          <div key={input.key} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">{input.label}</label>
+        {['ftp', 'wPrime', 'weight'].map((key) => (
+          <div key={key} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">
+              {key === 'wPrime' ? "W' (Joules)" : key.toUpperCase()}
+            </label>
             <input 
               type="number" 
-              value={stats[input.key]} 
-              onChange={e => setStats({...stats, [input.key]: Number(e.target.value)})} 
+              value={stats[key]} 
+              onChange={e => setStats({...stats, [key]: Number(e.target.value)})} 
               className="text-xl font-mono font-bold w-full text-indigo-600 outline-none"
             />
           </div>
@@ -78,35 +70,32 @@ export default function PacerApp() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="font-bold text-slate-800">Target Power vs CP</h2>
-            <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">
-                  {Math.floor(totalTime / 60)}:{(totalTime % 60).toFixed(0).padStart(2, '0')}
-                </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase">Estimated Time</div>
+            <div className="text-2xl font-black text-indigo-600">
+              {Math.floor(totalTime / 60)}:{(totalTime % 60).toFixed(0).padStart(2, '0')}
             </div>
           </div>
           
-          <div className="h-[320px] w-full">
+          <div className="h-[300px] w-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+              <ComposedChart data={chartData}>
                 <defs>
-                  <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="pacingGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset={ftpOffset} stopColor="#ef4444" stopOpacity={0.8} />
                     <stop offset={ftpOffset} stopColor="#22c55e" stopOpacity={0.8} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="dist" tick={{fontSize: 10}} label={{ value: 'Miles', position: 'bottom', offset: 0 }} />
+                <XAxis dataKey="dist" tick={{fontSize: 10}} />
                 <YAxis domain={[chartMin, chartMax]} tick={{fontSize: 10}} />
                 <Tooltip />
-                <ReferenceLine y={stats.ftp} stroke="#475569" strokeWidth={2} strokeDasharray="5 5" />
+                <ReferenceLine y={stats.ftp} stroke="#475569" strokeDasharray="5 5" strokeWidth={2} />
                 <Area 
                   type="stepAfter" 
                   dataKey="power" 
                   stroke="#4338ca" 
                   strokeWidth={2} 
-                  fill="url(#splitColor)" 
-                  isAnimationActive={false} 
+                  fill="url(#pacingGradient)" 
+                  isAnimationActive={false}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -115,15 +104,23 @@ export default function PacerApp() {
 
         {/* W' Chart */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h2 className="font-bold text-slate-800 mb-6">W' Balance (Joules)</h2>
-          <div className="h-[200px] w-full">
+          <h2 className="font-bold text-slate-800 mb-6">W' Balance</h2>
+          <div className="h-[200px] w-full min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="dist" hide />
                 <YAxis domain={[0, stats.wPrime]} tick={{fontSize: 10}} />
                 <Tooltip />
-                <Area type="monotone" dataKey="wBal" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.1} strokeWidth={2} isAnimationActive={false} />
+                <Area 
+                  type="monotone" 
+                  dataKey="wBal" 
+                  stroke="#f43f5e" 
+                  fill="#f43f5e" 
+                  fillOpacity={0.1} 
+                  strokeWidth={2} 
+                  isAnimationActive={false} 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
